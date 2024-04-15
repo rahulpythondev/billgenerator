@@ -4,15 +4,17 @@
 - This repository is used show generated Dues and Bills for month on month basis based on input Excel.
 - Input Format: CSV
   - Setup File
-    - Txn Code: Transaction Code
-    - Type: 
-      - Ignore: Txn to be ignored
-      - Bill: Billing Transaction Code
+    - TXN_CODE: Transaction Code
+    - TYPE: 
+      - IGNORE: Txn to be ignored
+      - BILL: Billing Transaction Code
+      - EXCESS: Excess Payment
   - Txn File
-    - Txn Date: Transaction Date
-    - GL Date: General Ledger Reflection Date
-    - Txn Code: Transaction Code
-    - Txn Amt: Transaction Amount, used +ve sign to update balance and -ve sign for reduction of balance.
+    - TXN_ID: Transaction Sequence Number
+    - TXN_POST_DT: Transaction Date
+    - TXN_GL_POST_DT: General Ledger Reflection Date
+    - TXN_TCD_CODE: Transaction Code
+    - TXN_AMT: Transaction Amount, used +ve sign to update balance and -ve sign for reduction of balance.
 - Output Format: CSV
   - Balance:
     - Balance: Balance Code
