@@ -32,6 +32,9 @@ def fn_download_link(df, filename, title):
 def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_df):
     """Function to generate balance and due date history"""
 
+    lv_total_tenure_outstanding = 0
+    lv_index = 0
+
     for lv_txn_index, lv_txn_row in mv_txn_df.iterrows():
         lv_setup_record_type = mv_setup_df.loc[mv_setup_df['TXN_CODE'] == lv_txn_row['TXN_TCD_CODE']]['TYPE'].values
         
@@ -45,6 +48,7 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
             if(lv_txn_row['TXN_AMT']>0):
                 # print("Add to Posted")
                 lv_posted = lv_txn_row['TXN_AMT']
+                lv_total_tenure_outstanding += lv_posted
             elif(lv_txn_row['TXN_AMT']<0):
                 # print("Add to Paid")
                 lv_paid = lv_txn_row['TXN_AMT']
@@ -64,7 +68,22 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                                            ignore_index=True)
 
         elif(lv_setup_record_type == "BILL"):
-            print("Bill")
+            lv_due_generation_dt = lv_txn_row['TXN_GL_POST_DT']
+            lv_due_amount = lv_txn_row['TXN_AMT']
+            mv_due_date_history_df = pd.concat([
+                                                    mv_due_date_history_df,
+                                                    pd.DataFrame(
+                                                                    {
+                                                                        'DUE_GENERATION_DATE': [lv_due_generation_dt],
+                                                                        'DUE_AMOUNT': [lv_due_amount],
+                                                                        'ADDITIONAL_CHARGES': [round(lv_total_tenure_outstanding - lv_due_amount,2)],
+                                                                        'TOTAL_OUTSTANDING': [lv_total_tenure_outstanding]                 
+                                                                    }
+                                                    )
+                                                ], ignore_index=True
+                                                )
+            lv_index += 1
+            lv_total_tenure_outstanding = 0
         elif(lv_setup_record_type == "IGNORE"):
             print("Ignore")
         elif(lv_setup_record_type == "BILL_ASSOCIATE"):
@@ -109,7 +128,7 @@ def main():
             mv_txn_df = pd.read_csv(lv_txn_csv, sep=',')
 
             mv_balance_df = pd.DataFrame(columns=['BALANCE_CODE','POSTED','PAID','OUTSTANDING'])
-            mv_due_date_history_df = pd.DataFrame(columns=['DUE_DATE','DUE_AMOUNT','ADDITIONAL_CHARGES','TOTAL_OUTSTANDING'])
+            mv_due_date_history_df = pd.DataFrame(columns=['DUE_GENERATION_DATE','DUE_AMOUNT','ADDITIONAL_CHARGES','TOTAL_OUTSTANDING'])
 
             with st.spinner("Generating response..."):
 

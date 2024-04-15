@@ -23,7 +23,7 @@
     - PAID: Paid Balance
     - OUTSTANDING: Total Outstanding Balance
   - Due Date History:
-    - DUE_DATE: Billing Transaction Date
+    - DUE_GENERATION_DATE: Billing Transaction Date
     - DUE_AMOUNT: Dude Amount To be Paid
     - ADDITIONAL_CHARGES: Addition Transactions posted between Due dates
     - TOTAL_OUTSTANDING: Due Amount + Additional Charges to be Paid
