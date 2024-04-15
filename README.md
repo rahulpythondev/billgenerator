@@ -8,6 +8,7 @@
     - TYPE: 
       - IGNORE: Txn to be ignored
       - BILL: Billing Transaction Code
+      - BILL_ASSOCIATE: Transaction Code Resulting to Billing Amount
       - EXCESS: Excess Payment
   - Txn File
     - TXN_ID: Transaction Sequence Number

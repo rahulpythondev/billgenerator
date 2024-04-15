@@ -28,6 +28,13 @@ def fn_download_link(df, filename, title):
     href = f'<a href="data:file/csv;base64,{b64}" download="{filename}">{title}</a>'
     return href
 
+# Function to generate balance and due date history
+def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_df):
+    """Function to generate balance and due date history"""
+
+    for lv_txn_index, lv_txn_row in mv_txn_df.iterrows():
+        lv_setup_record_type = mv_setup_df.loc[mv_setup_df['TXN_CODE'] == lv_txn_row['TXN_CODE'] , 'TYPE']
+
 # Main Program
 def main():
     
@@ -66,10 +73,12 @@ def main():
             mv_due_date_history_df = pd.DataFrame(columns=['DUE_DATE','DUE_AMOUNT','ADDITIONAL_CHARGEs','TOTAL_OUTSTANDING'])
 
             with st.spinner("Generating response..."):
+
+                # fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_df)
+
                 with st.expander("Balance Details"):
                     # -- Display Details
                     st.write(mv_balance_df)
-                    st.text("")
                     st.text("")
 
                     # -- Download Balance Details
@@ -77,7 +86,6 @@ def main():
                 with st.expander("Due Date History"):
                     # -- Display Details
                     st.write(mv_due_date_history_df)
-                    st.text("")
                     st.text("")
                     
                     # -- Download Due Date History Details
