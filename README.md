@@ -18,12 +18,12 @@
     - TXN_AMT: Transaction Amount, used +ve sign to update balance and -ve sign for reduction of balance.
 - Output Format: CSV
   - Balance:
-    - Balance: Balance Code
-    - Posted: Posted Balance
-    - Paid: Paid Balance
-    - Outstanding: Total Outstanding Balance
+    - BALANCE_CODE: Balance Code
+    - POSTED: Posted Balance
+    - PAID: Paid Balance
+    - OUTSTANDING: Total Outstanding Balance
   - Due Date History:
-    - Date: Billing Transaction Date
-    - Due Amount: Dude Amount To be Paid
-    - Additional Charges: Addition Transactions posted between Due dates
-    - Total Outstanding: Due Amount + Additional Charges to be Paid
+    - DUE_DATE: Billing Transaction Date
+    - DUE_AMOUNT: Dude Amount To be Paid
+    - ADDITIONAL_CHARGES: Addition Transactions posted between Due dates
+    - TOTAL_OUTSTANDING: Due Amount + Additional Charges to be Paid
