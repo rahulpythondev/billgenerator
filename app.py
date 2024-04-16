@@ -59,7 +59,7 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                                            ignore_index=True)
 
         elif(lv_setup_record_type == "BILL"):
-            lv_due_generation_dt = lv_txn_row['TXN_POST_DT']
+            lv_due_generation_dt = lv_txn_row['TXN_DT']
             lv_due_amount = lv_txn_row['TXN_AMT']
             mv_due_date_history_df = pd.concat([
                                                     mv_due_date_history_df,
@@ -86,8 +86,8 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
 def main():
     
     # -- Streamlit Settings
-    st.set_page_config("Billing Generation")
-    st.header("Billing Generation Agent 💁")
+    st.set_page_config("Loan Billing Summarizer")
+    st.header("Loan Billing Summarizer 💁")
     st.text("")
     st.text("")
     st.text("")

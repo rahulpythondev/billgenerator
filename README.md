@@ -11,8 +11,7 @@
       - EXCESS: Excess Payment
   - Txn File
     - TXN_ID: Transaction Sequence Number
-    - TXN_POST_DT: Transaction Date
-    - TXN_GL_POST_DT: General Ledger Reflection Date
+    - TXN_DT: Transaction Date
     - TXN_TCD_CODE: Transaction Code
     - TXN_AMT: Transaction Amount, used +ve sign to update balance and -ve sign for reduction of balance.
 - Output Format: CSV
