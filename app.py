@@ -68,7 +68,7 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                                            ignore_index=True)
 
         elif(lv_setup_record_type == "BILL"):
-            lv_due_generation_dt = lv_txn_row['TXN_GL_POST_DT']
+            lv_due_generation_dt = lv_txn_row['TXN_POST_DT']
             lv_due_amount = lv_txn_row['TXN_AMT']
             mv_due_date_history_df = pd.concat([
                                                     mv_due_date_history_df,
@@ -136,14 +136,14 @@ def main():
 
                 with st.expander("Balance Details"):
                     # -- Display Details
-                    st.write(mv_balance_df)
+                    st.dataframe(mv_balance_df, use_container_width=True)
                     # st.text("")
 
                     # -- Download Balance Details
                     # st.markdown(fn_download_link(mv_balance_df, "balance.csv", "Download Balance Details"), unsafe_allow_html=True)
                 with st.expander("Due Date History"):
                     # -- Display Details
-                    st.write(mv_due_date_history_df)
+                    st.dataframe(mv_due_date_history_df, use_container_width=True)
                     # st.text("")
                     
                     # -- Download Due Date History Details
