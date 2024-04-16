@@ -25,10 +25,12 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
 
     lv_total_tenure_outstanding = 0
     lv_index = 0
+    lv_txn_details = []
+    mv_txn_details_by_bill = [] 
 
     for lv_txn_index, lv_txn_row in mv_txn_df.iterrows():
         lv_setup_record_type = mv_setup_df.loc[mv_setup_df['TXN_CODE'] == lv_txn_row['TXN_TCD_CODE']]['TYPE'].values
-        
+        lv_txn_details.append(lv_txn_row)
         lv_balance_code = lv_txn_row['TXN_TCD_CODE']
         lv_posted = 0
         lv_paid = 0
@@ -68,11 +70,24 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                                                                         'DUE_GENERATION_DATE': [lv_due_generation_dt],
                                                                         'DUE_AMOUNT': [lv_due_amount],
                                                                         'ADDITIONAL_CHARGES': [round(lv_total_tenure_outstanding - lv_due_amount,2)],
-                                                                        'TOTAL_OUTSTANDING': [lv_total_tenure_outstanding]                 
+                                                                        'TOTAL_OUTSTANDING': [lv_total_tenure_outstanding],
+
                                                                     }
                                                     )
                                                 ], ignore_index=True
                                                 )
+            
+            temp_mv_balance_df = mv_balance_df.copy()
+            temp_mv_balance_df.loc['Total']=temp_mv_balance_df.sum()
+            temp_mv_balance_df.loc[temp_mv_balance_df.index[-1], 'BALANCE_CODE'] = ''
+
+            mv_txn_details_by_bill.append({
+                'DUE_GENERATION_DATE': lv_due_generation_dt,
+                'TXN_DETAILS': lv_txn_details,
+                'BALANCE_DETAILS': temp_mv_balance_df
+            })
+
+            lv_txn_details = []
             lv_index += 1
             lv_total_tenure_outstanding = 0
         elif(lv_setup_record_type == "IGNORE"):
@@ -80,7 +95,10 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
         elif(lv_setup_record_type == "EXCESS"):
             print("Excess")
 
-    return mv_balance_df,mv_due_date_history_df
+    mv_balance_df.loc['Total']= mv_balance_df.sum()
+    mv_balance_df.loc[mv_balance_df.index[-1], 'BALANCE_CODE'] = ''
+    
+    return mv_balance_df,mv_due_date_history_df, mv_txn_details_by_bill
 
 # Main Program
 def main():
@@ -121,15 +139,20 @@ def main():
 
             with st.spinner("Generating response..."):
 
-                mv_balance_df, mv_due_date_history_df = fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_df)
+                mv_balance_df, mv_due_date_history_df, mv_txn_details_by_bill = fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_df)
 
                 with st.expander("Balance Details"):
-                    # -- Display Details
                     st.dataframe(mv_balance_df, use_container_width=True)
 
                 with st.expander("Due Date History"):
-                    # -- Display Details
                     st.dataframe(mv_due_date_history_df, use_container_width=True)
+                
+                with st.container(border=True):
+                    st.subheader("Txn & Balance details By Due Date")
+                    for row in mv_txn_details_by_bill:
+                        with st.expander("Due Dt - "+str(row['DUE_GENERATION_DATE'])):
+                            st.dataframe(row['BALANCE_DETAILS'])
+                            st.dataframe(row['TXN_DETAILS'])
                                 
             fn_display_user_messages("File Processing Completed Successfully","Success",mv_processing_message)
         else:
