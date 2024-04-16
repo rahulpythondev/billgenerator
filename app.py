@@ -77,8 +77,6 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
             lv_total_tenure_outstanding = 0
         elif(lv_setup_record_type == "IGNORE"):
             print("Ignore")
-        elif(lv_setup_record_type == "BILL_ASSOCIATE"):
-            print("Bill Associate")
         elif(lv_setup_record_type == "EXCESS"):
             print("Excess")
 
