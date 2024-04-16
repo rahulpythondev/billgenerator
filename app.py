@@ -19,15 +19,6 @@ def fn_display_user_messages(lv_text, lv_type, mv_processing_message):
         with mv_processing_message.container(): 
             st.info(lv_text)
 
-# Function to create a download link for the DataFrame
-def fn_download_link(df, filename, title):
-    """Function to create a download link for the DataFrame"""
-
-    csv = df.to_csv(index=False)
-    b64 = base64.b64encode(csv.encode()).decode()  # Encode DataFrame as csv
-    href = f'<a href="data:file/csv;base64,{b64}" download="{filename}">{title}</a>'
-    return href
-
 # Function to generate balance and due date history
 def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_df):
     """Function to generate balance and due date history"""
@@ -137,17 +128,10 @@ def main():
                 with st.expander("Balance Details"):
                     # -- Display Details
                     st.dataframe(mv_balance_df, use_container_width=True)
-                    # st.text("")
 
-                    # -- Download Balance Details
-                    # st.markdown(fn_download_link(mv_balance_df, "balance.csv", "Download Balance Details"), unsafe_allow_html=True)
                 with st.expander("Due Date History"):
                     # -- Display Details
                     st.dataframe(mv_due_date_history_df, use_container_width=True)
-                    # st.text("")
-                    
-                    # -- Download Due Date History Details
-                    # st.markdown(fn_download_link(mv_due_date_history_df, "due_history.csv", "Download Due Date History"), unsafe_allow_html=True)
                                 
             fn_display_user_messages("File Processing Completed Successfully","Success",mv_processing_message)
         else:
