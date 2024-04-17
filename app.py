@@ -25,7 +25,9 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
 
     lv_total_tenure_outstanding = 0
     lv_total_posted_txns = 0
+    lv_total_due_amt = 0
     lv_total_payment = 0
+    lv_total_payment_appropriated = 0
     lv_index = 0
     lv_txn_details = []
     mv_txn_details_by_bill = [] 
@@ -50,9 +52,10 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                 lv_total_posted_txns += lv_posted
             elif(lv_txn_row['TXN_AMT']<0):
                 lv_paid = lv_txn_row['TXN_AMT']
+                lv_total_payment_appropriated += (lv_paid*-1)
 
             if (lv_txn_row['TXN_AMT'] != 0 and lv_balance_code != 'PAYMENT'):
-                print("Value of code is - "+lv_balance_code)
+                # print("Value of code is - "+lv_balance_code)
                 if lv_balance_code in mv_balance_df['BALANCE_CODE'].values:
                     lv_temp_row_id = mv_balance_df.index[mv_balance_df['BALANCE_CODE'] == lv_balance_code][0]
                     mv_balance_df.at[lv_temp_row_id, 'POSTED'] += lv_posted
@@ -70,6 +73,7 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
         elif(lv_setup_record_type == "BILL"):
             lv_due_generation_dt = lv_txn_row['TXN_DT']
             lv_due_amount = lv_txn_row['TXN_AMT']
+            lv_total_due_amt += lv_due_amount
             mv_due_date_history_df = pd.concat([
                                                     mv_due_date_history_df,
                                                     pd.DataFrame(
@@ -99,17 +103,17 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
             lv_total_tenure_outstanding = 0
             
         elif(lv_setup_record_type == "IGNORE"):
-            print("Ignore")
+            print("Ignore txns record - "+lv_balance_code)
         elif(lv_setup_record_type == "EXCESS"):
             lv_has_excess_payment = True
         elif(lv_setup_record_type == "PAYMENT"):
             lv_total_payment += lv_txn_row['TXN_AMT']
-            print('Payment - '+ str(lv_total_payment))
+            # print('Payment - '+ str(lv_total_payment))
 
     mv_balance_df.loc['Total']= mv_balance_df.sum()
     mv_balance_df.loc[mv_balance_df.index[-1], 'BALANCE_CODE'] = ''
     
-    return mv_balance_df,mv_due_date_history_df, mv_txn_details_by_bill, lv_total_posted_txns, lv_total_payment, lv_has_excess_payment
+    return mv_balance_df,mv_due_date_history_df, mv_txn_details_by_bill, lv_total_posted_txns, lv_total_payment, lv_total_due_amt, lv_total_payment_appropriated, lv_has_excess_payment
 
 # Main Program
 def main():
@@ -150,7 +154,7 @@ def main():
 
             with st.spinner("Generating response..."):
 
-                mv_balance_df, mv_due_date_history_df, mv_txn_details_by_bill, lv_total_posted_txns, lv_total_payment, lv_has_excess_payment = fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_df)
+                mv_balance_df, mv_due_date_history_df, mv_txn_details_by_bill, lv_total_posted_txns, lv_total_payment, lv_total_due_amt, lv_total_payment_appropriated, lv_has_excess_payment = fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_df)
 
                 with st.container(border=True):
                     if not lv_has_excess_payment:
@@ -158,8 +162,11 @@ def main():
                                         f"""
                                         #### Summary:
                                         - Total Txns Posted are **{round(lv_total_posted_txns,2)}**.
+                                        - Total Due Amounts are **{round(lv_total_due_amt,2)}**.
                                         - Total Payment received **{round(lv_total_payment,2)}**.
-                                        - Estimated Payoff Amount **{round(lv_total_posted_txns,2) - round(lv_total_payment,2)}**.
+                                        - Total Payment appropriated **{round(lv_total_payment_appropriated,2)}**.
+                                        - Difference of Payments **{round(round(lv_total_payment,2) - round(lv_total_payment_appropriated,2),2)}**.
+                                        - Estimated Payoff Amount **{round(round(lv_total_posted_txns,2) - round(lv_total_payment,2),2)}**.
                                         """
                                     )
                     else:
@@ -167,8 +174,11 @@ def main():
                                         f"""
                                         #### Summary:
                                         - Total Txns Posted are **{round(lv_total_posted_txns,2)}**.
+                                        - Total Due Amounts are **{round(lv_total_due_amt,2)}**.
                                         - Total Payment received **{round(lv_total_payment,2)}**.
-                                        - Estimated Payoff Amount **{round(lv_total_posted_txns,2) - round(lv_total_payment,2)}**.
+                                        - Total Payment appropriated **{round(lv_total_payment_appropriated,2)}**.
+                                        - Difference of Payments **{round(round(lv_total_payment,2) - round(lv_total_payment_appropriated,2),2)}**.
+                                        - Estimated Payoff Amount **{round(round(lv_total_posted_txns,2) - round(lv_total_payment,2),2)}**.
                                         - Account has Excess Payment Transaction.
                                         """
                                     )
@@ -181,6 +191,9 @@ def main():
                 
                 with st.container(border=True):
                     st.subheader("Txn & Balance details By Due Date")
+                    st.text("")
+                    st.text("")
+                    
                     for row in mv_txn_details_by_bill:
                         with st.expander("Due Dt - "+str(row['DUE_GENERATION_DATE'])):
                             st.dataframe(row['BALANCE_DETAILS'], use_container_width=True)
