@@ -19,6 +19,15 @@ def fn_display_user_messages(lv_text, lv_type, mv_processing_message):
         with mv_processing_message.container(): 
             st.info(lv_text)
 
+# Removing the length of the suffix from the end
+def remove_suffix(input_string, suffix):
+    """Removing the length of the suffix from the end"""
+    
+    if input_string.endswith(suffix):
+        return input_string[:-len(suffix)]
+    else:
+        raise("Invalid Input")
+
 # Function to generate balance and due date history
 def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_df):
     """Function to generate balance and due date history"""
@@ -32,13 +41,18 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
     lv_txn_details = []
     mv_txn_details_by_bill = [] 
     lv_has_excess_payment = False
+    lv_payment_excess = 0
 
     for lv_txn_index, lv_txn_row in mv_txn_df.iterrows():
         
         lv_setup_record_type = mv_setup_df.loc[mv_setup_df['TXN_CODE'] == lv_txn_row['TXN_TCD_CODE']]['TYPE'].values
         lv_balance_code = lv_txn_row['TXN_TCD_CODE']
         lv_posted = 0
+        lv_adj_plus = 0
+        lv_adj_minus = 0
+        lv_waive = 0
         lv_paid = 0
+        lv_payment_excess_paid = 0
 
         if(lv_balance_code != 'PAYMENT'):
             lv_txn_details.append(lv_txn_row)
@@ -47,9 +61,34 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
         
         if(len(lv_setup_record_type) == 0):
             if(lv_txn_row['TXN_AMT']>0):
-                lv_posted = lv_txn_row['TXN_AMT']
-                lv_total_tenure_outstanding += lv_posted
-                lv_total_posted_txns += lv_posted
+                if lv_balance_code.endswith("ADJ_PLUS"):
+                    lv_balance_code = remove_suffix(lv_balance_code, "_ADJ_PLUS")
+                    lv_adj_plus = lv_txn_row['TXN_AMT']
+                    lv_total_tenure_outstanding += lv_adj_plus
+                    lv_total_posted_txns += lv_adj_plus
+                elif lv_balance_code.endswith("ADJ_MINUS"):
+                    lv_balance_code = remove_suffix(lv_balance_code, "_ADJ_MINUS")
+                    lv_adj_minus = lv_txn_row['TXN_AMT']
+                    lv_total_payment_appropriated += lv_adj_minus
+                elif lv_balance_code.endswith("WAIVE"):
+                    lv_balance_code = remove_suffix(lv_balance_code, "_WAIVE")
+                    lv_waive = lv_txn_row['TXN_AMT']
+                    lv_total_payment_appropriated += lv_waive
+                else:
+                    lv_posted = lv_txn_row['TXN_AMT']
+                    lv_total_tenure_outstanding += lv_posted
+                    lv_total_posted_txns += lv_posted
+
+                if not(lv_balance_code.endswith("ADJ_MINUS")) and not(lv_balance_code.endswith("WAIVE")) and lv_payment_excess >0:
+                    if(lv_payment_excess > lv_txn_row['TXN_AMT']):
+                        print("Payment excess is more than txn Amount")
+                        lv_payment_excess_paid = lv_txn_row['TXN_AMT']
+                        lv_payment_excess = lv_payment_excess - lv_txn_row['TXN_AMT']
+                    else:
+                        print("Payment is less or equal to txn Amount")
+                        lv_payment_excess_paid = lv_payment_excess 
+                        lv_payment_excess = 0                
+
             elif(lv_txn_row['TXN_AMT']<0):
                 lv_paid = lv_txn_row['TXN_AMT']
                 lv_total_payment_appropriated += (lv_paid*-1)
@@ -60,12 +99,20 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                     lv_temp_row_id = mv_balance_df.index[mv_balance_df['BALANCE_CODE'] == lv_balance_code][0]
                     mv_balance_df.at[lv_temp_row_id, 'POSTED'] += lv_posted
                     mv_balance_df.at[lv_temp_row_id, 'PAID'] += lv_paid*-1
-                    mv_balance_df.at[lv_temp_row_id, 'OUTSTANDING'] = mv_balance_df.at[lv_temp_row_id, 'POSTED'] - mv_balance_df.at[lv_temp_row_id, 'PAID']
+                    mv_balance_df.at[lv_temp_row_id, 'ADJ_PLUS'] += lv_adj_plus
+                    mv_balance_df.at[lv_temp_row_id, 'ADJ_MINUS'] += lv_adj_minus
+                    mv_balance_df.at[lv_temp_row_id,'WAIVE'] += lv_waive
+                    mv_balance_df.at[lv_temp_row_id,'PAID_WITH_EXCESS'] += lv_payment_excess_paid
+                    mv_balance_df.at[lv_temp_row_id, 'OUTSTANDING'] = mv_balance_df.at[lv_temp_row_id, 'POSTED'] + mv_balance_df.at[lv_temp_row_id, 'ADJ_PLUS'] - mv_balance_df.at[lv_temp_row_id, 'ADJ_MINUS'] - mv_balance_df.at[lv_temp_row_id,'WAIVE'] - mv_balance_df.at[lv_temp_row_id, 'PAID'] - mv_balance_df.at[lv_temp_row_id,'PAID_WITH_EXCESS']
                 else:
                     mv_balance_df = pd.concat([mv_balance_df, pd.DataFrame(
                                                                     {   'BALANCE_CODE': [lv_balance_code],
                                                                         'POSTED': [lv_posted],
                                                                         'PAID': [lv_paid],
+                                                                        'ADJ_PLUS': [lv_adj_plus],
+                                                                        'ADJ_MINUS': [lv_adj_minus],
+                                                                        'WAIVE': [lv_waive],
+                                                                        'PAID_WITH_EXCESS': [lv_payment_excess_paid],
                                                                         'OUTSTANDING': [lv_posted - lv_paid]
                                                                     })],
                                             ignore_index=True)
@@ -82,7 +129,6 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                                                                         'DUE_AMOUNT': [lv_due_amount],
                                                                         'ADDITIONAL_CHARGES': [round(lv_total_tenure_outstanding - lv_due_amount,2)],
                                                                         'TOTAL_OUTSTANDING': [lv_total_tenure_outstanding],
-
                                                                     }
                                                     )
                                                 ], ignore_index=True
@@ -106,6 +152,7 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
             print("Ignore txns record - "+lv_balance_code)
         elif(lv_setup_record_type == "EXCESS"):
             lv_has_excess_payment = True
+            lv_payment_excess += lv_txn_row['TXN_AMT']*-1
         elif(lv_setup_record_type == "PAYMENT"):
             lv_total_payment += lv_txn_row['TXN_AMT']
             # print('Payment - '+ str(lv_total_payment))
@@ -149,7 +196,7 @@ def main():
             mv_setup_df = pd.read_csv(lv_setup_csv, sep=',')
             mv_txn_df = pd.read_csv(lv_txn_csv, sep=',')
 
-            mv_balance_df = pd.DataFrame(columns=['BALANCE_CODE','POSTED','PAID','OUTSTANDING'])
+            mv_balance_df = pd.DataFrame(columns=['BALANCE_CODE','POSTED','PAID','ADJ_PLUS','ADJ_MINUS','WAIVE','PAID_WITH_EXCESS','OUTSTANDING'])
             mv_due_date_history_df = pd.DataFrame(columns=['DUE_GENERATION_DATE','DUE_AMOUNT','ADDITIONAL_CHARGES','TOTAL_OUTSTANDING'])
 
             with st.spinner("Generating response..."):
