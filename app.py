@@ -54,6 +54,9 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
         lv_paid = 0
         lv_payment_excess_paid = 0
 
+        if lv_balance_code.endswith("CHGOFF"):
+            break
+
         if(lv_balance_code != 'PAYMENT'):
             lv_txn_details.append(lv_txn_row)
 
@@ -101,8 +104,8 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                     mv_balance_df.at[lv_temp_row_id, 'PAID'] += lv_paid*-1
                     mv_balance_df.at[lv_temp_row_id, 'ADJ_PLUS'] += lv_adj_plus
                     mv_balance_df.at[lv_temp_row_id, 'ADJ_MINUS'] += lv_adj_minus
-                    mv_balance_df.at[lv_temp_row_id,'WAIVE'] += lv_waive
-                    mv_balance_df.at[lv_temp_row_id,'PAID_WITH_EXCESS'] += lv_payment_excess_paid
+                    mv_balance_df.at[lv_temp_row_id, 'WAIVE'] += lv_waive
+                    mv_balance_df.at[lv_temp_row_id, 'PAID_WITH_EXCESS'] += lv_payment_excess_paid
                     mv_balance_df.at[lv_temp_row_id, 'OUTSTANDING'] = mv_balance_df.at[lv_temp_row_id, 'POSTED'] + mv_balance_df.at[lv_temp_row_id, 'ADJ_PLUS'] - mv_balance_df.at[lv_temp_row_id, 'ADJ_MINUS'] - mv_balance_df.at[lv_temp_row_id,'WAIVE'] - mv_balance_df.at[lv_temp_row_id, 'PAID'] - mv_balance_df.at[lv_temp_row_id,'PAID_WITH_EXCESS']
                 else:
                     mv_balance_df = pd.concat([mv_balance_df, pd.DataFrame(
