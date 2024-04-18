@@ -87,15 +87,15 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                     lv_total_tenure_outstanding += lv_posted
                     lv_total_posted_txns += lv_posted
 
-                if not(lv_txn_row['TXN_TCD_CODE'].endswith("ADJ_MINUS")) and not(lv_txn_row['TXN_TCD_CODE'].endswith("WAIVE")) and not(lv_txn_row['TXN_TCD_CODE'].endswith("ADJ_PLUS")) and lv_payment_excess >0:
-                    if(lv_payment_excess > lv_txn_row['TXN_AMT']):
-                        print("Payment excess is more than txn Amount")
-                        lv_payment_excess_paid = lv_txn_row['TXN_AMT']
-                        lv_payment_excess = lv_payment_excess - lv_txn_row['TXN_AMT']
-                    else:
-                        print("Payment is less or equal to txn Amount")
-                        lv_payment_excess_paid = lv_payment_excess 
-                        lv_payment_excess = 0                
+                # if not(lv_txn_row['TXN_TCD_CODE'].endswith("ADJ_MINUS")) and not(lv_txn_row['TXN_TCD_CODE'].endswith("WAIVE")) and lv_payment_excess >0:
+                #     if(lv_payment_excess > lv_txn_row['TXN_AMT']):
+                #         print("Payment excess is more than txn Amount")
+                #         lv_payment_excess_paid = lv_txn_row['TXN_AMT']
+                #         lv_payment_excess = lv_payment_excess - lv_txn_row['TXN_AMT']
+                #     else:
+                #         print("Payment is less or equal to txn Amount")
+                #         lv_payment_excess_paid = lv_payment_excess 
+                #         lv_payment_excess = 0                
 
             elif(lv_txn_row['TXN_AMT']<0):
                 lv_paid = lv_txn_row['TXN_AMT']
@@ -143,6 +143,18 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                                                 )
             
             temp_mv_balance_df = mv_balance_df.copy()
+            # if(lv_payment_excess >0):
+            #     temp_mv_balance_df = pd.concat([temp_mv_balance_df, pd.DataFrame(
+            #                                                                 {   'BALANCE_CODE': "CREDIT",
+            #                                                                     'POSTED': [0],
+            #                                                                     'PAID': [0],
+            #                                                                     'ADJ_PLUS': [0],
+            #                                                                     'ADJ_MINUS': [0],
+            #                                                                     'WAIVE': [0],
+            #                                                                     'PAID_WITH_EXCESS': [lv_payment_excess],
+            #                                                                     'OUTSTANDING': [lv_payment_excess*-1]
+            #                                                                 })],
+            #                                         ignore_index=True)
             temp_mv_balance_df.loc['Total']=temp_mv_balance_df.sum()
             temp_mv_balance_df.loc[temp_mv_balance_df.index[-1], 'BALANCE_CODE'] = ''
 
@@ -165,18 +177,18 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
             lv_total_payment += lv_txn_row['TXN_AMT']
             # print('Payment - '+ str(lv_total_payment))
 
-    if(lv_payment_excess >0):
-        mv_balance_df = pd.concat([mv_balance_df, pd.DataFrame(
-                                                                    {   'BALANCE_CODE': "CREDIT",
-                                                                        'POSTED': [0],
-                                                                        'PAID': [0],
-                                                                        'ADJ_PLUS': [0],
-                                                                        'ADJ_MINUS': [0],
-                                                                        'WAIVE': [0],
-                                                                        'PAID_WITH_EXCESS': [lv_payment_excess],
-                                                                        'OUTSTANDING': [lv_payment_excess*-1]
-                                                                    })],
-                                            ignore_index=True)
+    # if(lv_payment_excess >0):
+    #     mv_balance_df = pd.concat([mv_balance_df, pd.DataFrame(
+    #                                                                 {   'BALANCE_CODE': "CREDIT",
+    #                                                                     'POSTED': [0],
+    #                                                                     'PAID': [0],
+    #                                                                     'ADJ_PLUS': [0],
+    #                                                                     'ADJ_MINUS': [0],
+    #                                                                     'WAIVE': [0],
+    #                                                                     'PAID_WITH_EXCESS': [lv_payment_excess],
+    #                                                                     'OUTSTANDING': [lv_payment_excess*-1]
+    #                                                                 })],
+    #                                         ignore_index=True)
     mv_balance_df.loc['Total']= mv_balance_df.sum()
     mv_balance_df.loc[mv_balance_df.index[-1], 'BALANCE_CODE'] = ''
     
