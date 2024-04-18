@@ -36,11 +36,14 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
     lv_total_posted_txns = 0
     lv_total_due_amt = 0
     lv_total_payment = 0
+    lv_total_waived = 0
+    lv_total_adj_minus = 0
     lv_total_payment_appropriated = 0
     lv_index = 0
     lv_txn_details = []
     mv_txn_details_by_bill = [] 
     lv_has_excess_payment = False
+    lv_has_charged_off = False
     lv_payment_excess = 0
 
     for lv_txn_index, lv_txn_row in mv_txn_df.iterrows():
@@ -55,6 +58,8 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
         lv_payment_excess_paid = 0
 
         if lv_balance_code.endswith("CHGOFF"):
+            lv_has_charged_off = True
+            print("Account is Charged OFF")
             break
 
         if(lv_balance_code != 'PAYMENT'):
@@ -72,17 +77,17 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                 elif lv_balance_code.endswith("ADJ_MINUS"):
                     lv_balance_code = remove_suffix(lv_balance_code, "_ADJ_MINUS")
                     lv_adj_minus = lv_txn_row['TXN_AMT']
-                    lv_total_payment_appropriated += lv_adj_minus
+                    lv_total_adj_minus += lv_adj_minus
                 elif lv_balance_code.endswith("WAIVE"):
                     lv_balance_code = remove_suffix(lv_balance_code, "_WAIVE")
                     lv_waive = lv_txn_row['TXN_AMT']
-                    lv_total_payment_appropriated += lv_waive
+                    lv_total_waived += lv_waive
                 else:
                     lv_posted = lv_txn_row['TXN_AMT']
                     lv_total_tenure_outstanding += lv_posted
                     lv_total_posted_txns += lv_posted
 
-                if not(lv_balance_code.endswith("ADJ_MINUS")) and not(lv_balance_code.endswith("WAIVE")) and lv_payment_excess >0:
+                if not(lv_txn_row['TXN_TCD_CODE'].endswith("ADJ_MINUS")) and not(lv_txn_row['TXN_TCD_CODE'].endswith("WAIVE")) and not(lv_txn_row['TXN_TCD_CODE'].endswith("ADJ_PLUS")) and lv_payment_excess >0:
                     if(lv_payment_excess > lv_txn_row['TXN_AMT']):
                         print("Payment excess is more than txn Amount")
                         lv_payment_excess_paid = lv_txn_row['TXN_AMT']
@@ -163,13 +168,13 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
     mv_balance_df.loc['Total']= mv_balance_df.sum()
     mv_balance_df.loc[mv_balance_df.index[-1], 'BALANCE_CODE'] = ''
     
-    return mv_balance_df,mv_due_date_history_df, mv_txn_details_by_bill, lv_total_posted_txns, lv_total_payment, lv_total_due_amt, lv_total_payment_appropriated, lv_has_excess_payment
+    return mv_balance_df,mv_due_date_history_df, mv_txn_details_by_bill, lv_total_posted_txns, lv_total_payment, lv_total_due_amt, lv_total_payment_appropriated, lv_total_adj_minus, lv_total_waived, lv_has_excess_payment, lv_has_charged_off
 
 # Main Program
 def main():
     
     # -- Streamlit Settings
-    st.set_page_config("Billing Summarizer")
+    st.set_page_config("Billing Summarizer",layout="wide")
     st.header("Billing Summarizer 💁")
     st.text("")
     st.text("")
@@ -204,34 +209,29 @@ def main():
 
             with st.spinner("Generating response..."):
 
-                mv_balance_df, mv_due_date_history_df, mv_txn_details_by_bill, lv_total_posted_txns, lv_total_payment, lv_total_due_amt, lv_total_payment_appropriated, lv_has_excess_payment = fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_df)
+                mv_balance_df,mv_due_date_history_df, mv_txn_details_by_bill, lv_total_posted_txns, lv_total_payment, lv_total_due_amt, lv_total_payment_appropriated, lv_total_adj_minus, lv_total_waived, lv_has_excess_payment, lv_has_charged_off = fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_df)
+                lv_summary = f"""
+                                        #### Summary:
+                                        - Total Txns Posted          =  **{round(lv_total_posted_txns,2)}**.
+                                        - Total Due Amounts          =  **{round(lv_total_due_amt,2)}**.
+                                        - Total Payment Received     =  **{round(lv_total_payment,2)}**.
+                                        - Total Payment Appropriated =  **{round(lv_total_payment_appropriated,2)}**.
+                                        - Total Adjust Minus         =  **{round(lv_total_adj_minus,2)}**.
+                                        - Total Waived               =  **{round(lv_total_waived,2)}**.
+                                        - Difference of Payments     =  **{round(round(lv_total_payment,2) - round(lv_total_payment_appropriated,2),2)}**.
+                                        - Estimated Payoff Amount    =  **{round(round(lv_total_posted_txns,2) - round(lv_total_payment,2) - round(lv_total_adj_minus,2) - round(lv_total_waived,2),2)}**.
+                                        """
 
                 with st.container(border=True):
-                    if not lv_has_excess_payment:
-                        st.markdown(
-                                        f"""
-                                        #### Summary:
-                                        - Total Txns Posted are **{round(lv_total_posted_txns,2)}**.
-                                        - Total Due Amounts are **{round(lv_total_due_amt,2)}**.
-                                        - Total Payment received **{round(lv_total_payment,2)}**.
-                                        - Total Payment appropriated **{round(lv_total_payment_appropriated,2)}**.
-                                        - Difference of Payments **{round(round(lv_total_payment,2) - round(lv_total_payment_appropriated,2),2)}**.
-                                        - Estimated Payoff Amount **{round(round(lv_total_posted_txns,2) - round(lv_total_payment,2),2)}**.
-                                        """
-                                    )
-                    else:
-                        st.markdown(
-                                        f"""
-                                        #### Summary:
-                                        - Total Txns Posted are **{round(lv_total_posted_txns,2)}**.
-                                        - Total Due Amounts are **{round(lv_total_due_amt,2)}**.
-                                        - Total Payment received **{round(lv_total_payment,2)}**.
-                                        - Total Payment appropriated **{round(lv_total_payment_appropriated,2)}**.
-                                        - Difference of Payments **{round(round(lv_total_payment,2) - round(lv_total_payment_appropriated,2),2)}**.
-                                        - Estimated Payoff Amount **{round(round(lv_total_posted_txns,2) - round(lv_total_payment,2),2)}**.
+                    if lv_has_excess_payment:
+                         lv_summary += f"""
                                         - Account has Excess Payment Transaction.
                                         """
-                                    )
+                    if lv_has_charged_off:
+                        lv_summary += f"""
+                                        - Account is Charged off. Consider below as chargeoff balances
+                                        """
+                    st.markdown(lv_summary)
 
                 with st.expander("Balance Details"):
                     st.dataframe(mv_balance_df, use_container_width=True)
