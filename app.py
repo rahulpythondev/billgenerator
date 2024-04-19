@@ -49,6 +49,7 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
     for lv_txn_index, lv_txn_row in mv_txn_df.iterrows():
         
         lv_setup_record_type = mv_setup_df.loc[mv_setup_df['TXN_CODE'] == lv_txn_row['TXN_TCD_CODE']]['TYPE'].values
+        print('Value - '+lv_setup_record_type+' Amount '+str(lv_txn_row['TXN_AMT']))
         lv_balance_code = lv_txn_row['TXN_TCD_CODE']
         lv_posted = 0
         lv_adj_plus = 0
@@ -56,6 +57,7 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
         lv_waive = 0
         lv_paid = 0
         lv_payment_excess_paid = 0
+        lv_refund =0
 
         if lv_balance_code.endswith("CHGOFF"):
             lv_has_charged_off = True
@@ -65,8 +67,35 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
         if(lv_balance_code != 'PAYMENT'):
             lv_txn_details.append(lv_txn_row)
         
+        if(lv_setup_record_type == 'REFUND'):
+            lv_refund = lv_txn_row['TXN_AMT']
+
+            if lv_balance_code in mv_balance_df['BALANCE_CODE'].values:
+                lv_temp_row_id = mv_balance_df.index[mv_balance_df['BALANCE_CODE'] == lv_balance_code][0]
+                mv_balance_df.at[lv_temp_row_id, 'POSTED'] = 0
+                mv_balance_df.at[lv_temp_row_id, 'PAID'] = 0
+                mv_balance_df.at[lv_temp_row_id, 'ADJ_PLUS'] = 0
+                mv_balance_df.at[lv_temp_row_id, 'ADJ_MINUS'] = 0
+                mv_balance_df.at[lv_temp_row_id, 'WAIVE'] = 0
+                mv_balance_df.at[lv_temp_row_id, 'PAID_WITH_EXCESS'] = 0
+                mv_balance_df.at[lv_temp_row_id, 'REFUND'] += lv_refund
+                mv_balance_df.at[lv_temp_row_id, 'OUTSTANDING'] = mv_balance_df.at[lv_temp_row_id, 'POSTED'] + mv_balance_df.at[lv_temp_row_id, 'ADJ_PLUS'] + mv_balance_df.at[lv_temp_row_id, 'REFUND']  - mv_balance_df.at[lv_temp_row_id, 'ADJ_MINUS'] - mv_balance_df.at[lv_temp_row_id,'WAIVE'] - mv_balance_df.at[lv_temp_row_id, 'PAID'] - mv_balance_df.at[lv_temp_row_id,'PAID_WITH_EXCESS']
+            else:
+                mv_balance_df = pd.concat([mv_balance_df, pd.DataFrame(
+                                                                {   'BALANCE_CODE': lv_balance_code,
+                                                                    'POSTED': [0],
+                                                                    'PAID': [0],
+                                                                    'ADJ_PLUS': [0],
+                                                                    'ADJ_MINUS': [0],
+                                                                    'WAIVE': [0],
+                                                                    'PAID_WITH_EXCESS': [0],
+                                                                    'REFUND':[lv_refund],
+                                                                    'OUTSTANDING': [lv_refund]
+                                                                })],
+                                        ignore_index=True)
+        
         if(len(lv_setup_record_type) == 0 and lv_balance_code != 'PAYMENT_EXCESS'):
-            if(lv_txn_row['TXN_AMT']>0):
+            if(lv_txn_row['TXN_AMT']>0) :
                 if lv_balance_code.endswith("ADJ_PLUS"):
                     lv_balance_code = remove_suffix(lv_balance_code, "_ADJ_PLUS")
                     lv_adj_plus = lv_txn_row['TXN_AMT']
@@ -84,7 +113,6 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                     lv_posted = lv_txn_row['TXN_AMT']
                     lv_total_tenure_outstanding += lv_posted
                     lv_total_posted_txns += lv_posted              
-
             elif(lv_txn_row['TXN_AMT']<0):
                 lv_temp_paid = lv_txn_row['TXN_AMT']
                 
@@ -94,7 +122,7 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                 else:
                     lv_paid = lv_temp_paid
                 
-                lv_total_payment_appropriated += (lv_paid*-1)
+                lv_total_payment_appropriated += (lv_temp_paid*-1)
 
             if (lv_txn_row['TXN_AMT'] != 0 and lv_balance_code != 'PAYMENT'):
                 if lv_balance_code in mv_balance_df['BALANCE_CODE'].values:
@@ -105,7 +133,8 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                     mv_balance_df.at[lv_temp_row_id, 'ADJ_MINUS'] += lv_adj_minus
                     mv_balance_df.at[lv_temp_row_id, 'WAIVE'] += lv_waive
                     mv_balance_df.at[lv_temp_row_id, 'PAID_WITH_EXCESS'] += lv_payment_excess_paid
-                    mv_balance_df.at[lv_temp_row_id, 'OUTSTANDING'] = mv_balance_df.at[lv_temp_row_id, 'POSTED'] + mv_balance_df.at[lv_temp_row_id, 'ADJ_PLUS'] - mv_balance_df.at[lv_temp_row_id, 'ADJ_MINUS'] - mv_balance_df.at[lv_temp_row_id,'WAIVE'] - mv_balance_df.at[lv_temp_row_id, 'PAID'] - mv_balance_df.at[lv_temp_row_id,'PAID_WITH_EXCESS']
+                    mv_balance_df.at[lv_temp_row_id, 'REFUND'] += lv_refund
+                    mv_balance_df.at[lv_temp_row_id, 'OUTSTANDING'] = mv_balance_df.at[lv_temp_row_id, 'POSTED'] + mv_balance_df.at[lv_temp_row_id, 'ADJ_PLUS'] + mv_balance_df.at[lv_temp_row_id, 'REFUND']  - mv_balance_df.at[lv_temp_row_id, 'ADJ_MINUS'] - mv_balance_df.at[lv_temp_row_id,'WAIVE'] - mv_balance_df.at[lv_temp_row_id, 'PAID'] - mv_balance_df.at[lv_temp_row_id,'PAID_WITH_EXCESS']
                 else:
                     mv_balance_df = pd.concat([mv_balance_df, pd.DataFrame(
                                                                     {   'BALANCE_CODE': [lv_balance_code],
@@ -115,7 +144,8 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                                                                         'ADJ_MINUS': [lv_adj_minus],
                                                                         'WAIVE': [lv_waive],
                                                                         'PAID_WITH_EXCESS': [lv_payment_excess_paid],
-                                                                        'OUTSTANDING': [lv_posted - lv_paid]
+                                                                        'REFUND':[lv_refund],
+                                                                        'OUTSTANDING': [lv_posted + lv_adj_plus + lv_refund - lv_paid - lv_adj_minus - lv_waive]
                                                                     })],
                                             ignore_index=True)
 
@@ -146,6 +176,7 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                                                                                 'ADJ_MINUS': [0],
                                                                                 'WAIVE': [0],
                                                                                 'PAID_WITH_EXCESS': [lv_payment_excess],
+                                                                                'REFUND':[0],
                                                                                 'OUTSTANDING': [lv_payment_excess*-1]
                                                                             })],
                                                     ignore_index=True)
@@ -179,6 +210,7 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                                                                         'ADJ_MINUS': [0],
                                                                         'WAIVE': [0],
                                                                         'PAID_WITH_EXCESS': [lv_payment_excess],
+                                                                        'REFUND':[0],
                                                                         'OUTSTANDING': [lv_payment_excess*-1]
                                                                     })],
                                             ignore_index=True)
@@ -222,7 +254,7 @@ def main():
             mv_setup_df = pd.read_csv(lv_setup_csv, sep=',')
             mv_txn_df = pd.read_csv(lv_txn_csv, sep=',')
 
-            mv_balance_df = pd.DataFrame(columns=['BALANCE_CODE','POSTED','PAID','ADJ_PLUS','ADJ_MINUS','WAIVE','PAID_WITH_EXCESS','OUTSTANDING'])
+            mv_balance_df = pd.DataFrame(columns=['BALANCE_CODE','POSTED','PAID','ADJ_PLUS','ADJ_MINUS','WAIVE','PAID_WITH_EXCESS','REFUND','OUTSTANDING'])
             mv_due_date_history_df = pd.DataFrame(columns=['DUE_GENERATION_DATE','DUE_AMOUNT','ADDITIONAL_CHARGES','TOTAL_OUTSTANDING'])
 
             with st.spinner("Generating response..."):
