@@ -64,10 +64,8 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
 
         if(lv_balance_code != 'PAYMENT'):
             lv_txn_details.append(lv_txn_row)
-
-        # print("For Txn Code "+lv_txn_row['TXN_TCD_CODE']+" Value of lv_setup_record_type is - "+str(lv_setup_record_type))
         
-        if(len(lv_setup_record_type) == 0):
+        if(len(lv_setup_record_type) == 0 and lv_balance_code != 'PAYMENT_EXCESS'):
             if(lv_txn_row['TXN_AMT']>0):
                 if lv_balance_code.endswith("ADJ_PLUS"):
                     lv_balance_code = remove_suffix(lv_balance_code, "_ADJ_PLUS")
@@ -88,13 +86,15 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                     lv_total_posted_txns += lv_posted              
 
             elif(lv_txn_row['TXN_AMT']<0):
-                lv_paid = lv_txn_row['TXN_AMT']
-                lv_total_payment_appropriated += (lv_paid*-1)
-
+                lv_temp_paid = lv_txn_row['TXN_AMT']
+                
                 if(lv_txn_row['PAID_WITH_EXCESS'] == 'Y'):
-                    lv_payment_excess += lv_paid
-                    lv_payment_excess_paid = lv_paid
-
+                    lv_payment_excess += lv_temp_paid
+                    lv_payment_excess_paid = lv_temp_paid*-1
+                else:
+                    lv_paid = lv_temp_paid
+                
+                lv_total_payment_appropriated += (lv_paid*-1)
 
             if (lv_txn_row['TXN_AMT'] != 0 and lv_balance_code != 'PAYMENT'):
                 if lv_balance_code in mv_balance_df['BALANCE_CODE'].values:
@@ -182,7 +182,7 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
                                                                         'OUTSTANDING': [lv_payment_excess*-1]
                                                                     })],
                                             ignore_index=True)
-                                            
+
     mv_balance_df.loc['Total']= mv_balance_df.sum()
     mv_balance_df.loc[mv_balance_df.index[-1], 'BALANCE_CODE'] = ''
     
