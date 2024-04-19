@@ -39,6 +39,7 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
     lv_total_waived = 0
     lv_total_adj_minus = 0
     lv_total_payment_appropriated = 0
+    lv_total_refund = 0
     lv_index = 0
     lv_txn_details = []
     mv_txn_details_by_bill = [] 
@@ -49,7 +50,6 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
     for lv_txn_index, lv_txn_row in mv_txn_df.iterrows():
         
         lv_setup_record_type = mv_setup_df.loc[mv_setup_df['TXN_CODE'] == lv_txn_row['TXN_TCD_CODE']]['TYPE'].values
-        print('Value - '+lv_setup_record_type+' Amount '+str(lv_txn_row['TXN_AMT']))
         lv_balance_code = lv_txn_row['TXN_TCD_CODE']
         lv_posted = 0
         lv_adj_plus = 0
@@ -69,6 +69,7 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
         
         if(lv_setup_record_type == 'REFUND'):
             lv_refund = lv_txn_row['TXN_AMT']
+            lv_total_refund += lv_refund
 
             if lv_balance_code in mv_balance_df['BALANCE_CODE'].values:
                 lv_temp_row_id = mv_balance_df.index[mv_balance_df['BALANCE_CODE'] == lv_balance_code][0]
@@ -218,7 +219,7 @@ def fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_
     mv_balance_df.loc['Total']= mv_balance_df.sum()
     mv_balance_df.loc[mv_balance_df.index[-1], 'BALANCE_CODE'] = ''
     
-    return mv_balance_df,mv_due_date_history_df, mv_txn_details_by_bill, lv_total_posted_txns, lv_total_payment, lv_total_due_amt, lv_total_payment_appropriated, lv_total_adj_minus, lv_total_waived, lv_has_excess_payment, lv_has_charged_off
+    return mv_balance_df,mv_due_date_history_df, mv_txn_details_by_bill, lv_total_posted_txns, lv_total_payment, lv_total_due_amt, lv_total_payment_appropriated, lv_total_adj_minus, lv_total_waived, lv_total_refund, lv_has_excess_payment, lv_has_charged_off
 
 # Main Program
 def main():
@@ -259,7 +260,7 @@ def main():
 
             with st.spinner("Generating response..."):
 
-                mv_balance_df,mv_due_date_history_df, mv_txn_details_by_bill, lv_total_posted_txns, lv_total_payment, lv_total_due_amt, lv_total_payment_appropriated, lv_total_adj_minus, lv_total_waived, lv_has_excess_payment, lv_has_charged_off = fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_df)
+                mv_balance_df,mv_due_date_history_df, mv_txn_details_by_bill, lv_total_posted_txns, lv_total_payment, lv_total_due_amt, lv_total_payment_appropriated, lv_total_adj_minus, lv_total_waived, lv_total_refund, lv_has_excess_payment, lv_has_charged_off = fn_generate_data(mv_setup_df, mv_txn_df, mv_balance_df, mv_due_date_history_df)
                 lv_summary = f"""
                                         #### Summary:
                                         - Total Txns Posted          =  **{round(lv_total_posted_txns,2)}**.
@@ -269,7 +270,7 @@ def main():
                                         - Total Adjust Minus         =  **{round(lv_total_adj_minus,2)}**.
                                         - Total Waived               =  **{round(lv_total_waived,2)}**.
                                         - Difference of Payments     =  **{round(round(lv_total_payment,2) - round(lv_total_payment_appropriated,2),2)}**.
-                                        - Estimated Payoff Amount    =  **{round(round(lv_total_posted_txns,2) - round(lv_total_payment,2) - round(lv_total_adj_minus,2) - round(lv_total_waived,2),2)}**.
+                                        - Estimated Payoff Amount    =  **{round(round(lv_total_posted_txns,2) - round(lv_total_payment,2) - round(lv_total_adj_minus,2) - round(lv_total_waived,2) + round(lv_total_refund,2),2)}**.
                                         """
 
                 with st.container(border=True):
